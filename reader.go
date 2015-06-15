@@ -1,342 +1,351 @@
 package main
 
 import (
-  "fmt"
-  "log"
-  "bytes"
-  "io"
-  "strconv"
-  "regexp"
-  "strings"
+	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 func main() {
-  bs := []byte("[1 2 3 \"hey\";\n4 oops/what :oops/what something]")
-  buf := bytes.NewReader(bs)
-  
-  val, err := read(buf)
-  if err != nil {
-    log.Fatal(err)
-  }
-  
-  fmt.Println(val)
+	bs := []byte("[1 2 3 \"hey\";\n4 oops/what :oops/what something]")
+	buf := bytes.NewReader(bs)
+
+	val, err := read(buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(val)
 }
 
 func read(r io.ByteScanner) (interface{}, error) {
-  for {
-    ch, err := r.ReadByte()
-    if err != nil {
-      return nil, err
-    }
-    
-    if isDigit(ch) {
-      n, err := readNumber(r, ch)
-      if err != nil {
-        return nil, err
-      }
-    
-      return n, nil
-    }
+	for {
+		ch, err := r.ReadByte()
+		if err != nil {
+			return nil, err
+		}
 
-    macroRdr, ok := macros[ch]
-    if ok {
-      val, err := macroRdr(r, ch)
-      if err != nil {
-        return nil, fmt.Errorf("macroRdr: '%c': %v", ch, err)
-      }
+		if isDigit(ch) {
+			n, err := readNumber(r, ch)
+			if err != nil {
+				return nil, err
+			}
 
-      if val == r {
-        continue
-      }
+			return n, nil
+		}
 
-      return val, nil
-    }
+		macroRdr, ok := macros[ch]
+		if ok {
+			val, err := macroRdr(r, ch)
+			if err != nil {
+				return nil, fmt.Errorf("macroRdr: '%c': %v", ch, err)
+			}
 
-    if ch == '+' || ch == '-' {
-      ch2, err := r.ReadByte()
-      if err != nil {
-        return nil, err
-      }
+			if val == r {
+				continue
+			}
 
-      if isDigit(ch2) {
-        r.UnreadByte()
-        n, err := readNumber(r, ch)
-        if err != nil {
-          return nil, err
-        }
+			return val, nil
+		}
 
-        return n, err
-      }
+		if ch == '+' || ch == '-' {
+			ch2, err := r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
 
-      r.UnreadByte()
-    }
+			if isDigit(ch2) {
+				r.UnreadByte()
+				n, err := readNumber(r, ch)
+				if err != nil {
+					return nil, err
+				}
 
-    token, err := readToken(r, ch)
-    if err != nil {
-      return nil, err
-    }
+				return n, err
+			}
 
-    return interpretToken(token)
-  }
+			r.UnreadByte()
+		}
+
+		token, err := readToken(r, ch)
+		if err != nil {
+			return nil, err
+		}
+
+		return interpretToken(token)
+	}
 }
 
 var macros = map[byte]func(r io.ByteScanner, ch byte) (interface{}, error){}
 
 func init() {
-  macros['['] = readVector
-  macros[']'] = unmatchedDelimiter
-  macros['"'] = readString
-  macros[';'] = readComment
+	macros['['] = readVector
+	macros[']'] = unmatchedDelimiter
+	macros['"'] = readString
+	macros[';'] = readComment
 }
 
 func readComment(r io.ByteScanner, ch byte) (interface{}, error) {
-  for {
-    ch, err := r.ReadByte()
-    if err == io.EOF {
-      return nil, fmt.Errorf("eof while reading comment")
-    } else if err != nil {
-      return nil, err
-    }
-    
-    if ch == '\n' || ch == '\r' {
-      return r, nil
-    }
-  }
+	for {
+		ch, err := r.ReadByte()
+		if err == io.EOF {
+			return nil, fmt.Errorf("eof while reading comment")
+		} else if err != nil {
+			return nil, err
+		}
+
+		if ch == '\n' || ch == '\r' {
+			return r, nil
+		}
+	}
 }
 
 func readString(r io.ByteScanner, ch byte) (interface{}, error) {
-  buf := []byte{}
-  
-  for ch, err := r.ReadByte(); ch != '"'; ch, err = r.ReadByte() {
-    if err == io.EOF {
-      return nil, fmt.Errorf("eof while reading string")
-    } else if err != nil {
-      return nil, err
-    }
-    
-    if ch == '\\' {
-      ch, err = r.ReadByte()
-      if err == io.EOF {
-        return nil, fmt.Errorf("eof while reading string")
-      } else if err != nil {
-        return nil, err
-      }
-      
-      switch ch {
-      case 't':
-        ch = '\t'
-      case 'r':
-        ch = '\r'
-      case 'n':
-        ch = '\n'
-      case '\\':
-      case '"':
-      case '\b':
-        ch = '\b'
-      case 'f':
-        ch = '\f'
-      case 'u':
-        ch, err = r.ReadByte()
-        if err == io.EOF {
-          return nil, fmt.Errorf("eof while reading string")
-        } else if err != nil {
-          return nil, err
-        }
-        
-        return nil, fmt.Errorf("unicode escapes not implemented")
-      default:
-        if isDigit(ch) {
-          return nil, fmt.Errorf("octal escapes not implemented")
-        } else {
-          return nil, fmt.Errorf("unsupported escape character: '%c'", ch)
-        }
-      }
-    }
-    
-    buf = append(buf, ch)
-  }
-  
-  return string(buf), nil
+	buf := []byte{}
+
+	for ch, err := r.ReadByte(); ch != '"'; ch, err = r.ReadByte() {
+		if err == io.EOF {
+			return nil, fmt.Errorf("eof while reading string")
+		} else if err != nil {
+			return nil, err
+		}
+
+		if ch == '\\' {
+			ch, err = r.ReadByte()
+			if err == io.EOF {
+				return nil, fmt.Errorf("eof while reading string")
+			} else if err != nil {
+				return nil, err
+			}
+
+			switch ch {
+			case 't':
+				ch = '\t'
+			case 'r':
+				ch = '\r'
+			case 'n':
+				ch = '\n'
+			case '\\':
+			case '"':
+			case '\b':
+				ch = '\b'
+			case 'f':
+				ch = '\f'
+			case 'u':
+				ch, err = r.ReadByte()
+				if err == io.EOF {
+					return nil, fmt.Errorf("eof while reading string")
+				} else if err != nil {
+					return nil, err
+				}
+
+				return nil, fmt.Errorf("unicode escapes not implemented")
+			default:
+				if isDigit(ch) {
+					return nil, fmt.Errorf("octal escapes not implemented")
+				} else {
+					return nil, fmt.Errorf("unsupported escape character: '%c'", ch)
+				}
+			}
+		}
+
+		buf = append(buf, ch)
+	}
+
+	return string(buf), nil
 }
 
 func readVector(r io.ByteScanner, ch byte) (interface{}, error) {
-  vec := []interface{}{}
-  
-  for {
-    ch, err := r.ReadByte()
-    if err == io.EOF {
-      return nil, fmt.Errorf("eof while reading vector")
-    } else if err != nil {
-      return nil, fmt.Errorf("readVector: %v", err)
-    }
-    
-    for isWhitespace(ch) {
-      ch, err = r.ReadByte()
-      if err != nil {
-        return nil, fmt.Errorf("readVector: whitespace: ", err)
-      }
-    }
-    
-    if ch == ']' {
-      break
-    }
-    
-    macroRdr, ok := macros[ch]
-    if ok {
-      val, err := macroRdr(r, ch)
-      if err != nil {
-        return nil, err
-      }
-      
-      if val == r {
-        continue
-      }
-      
-      vec = append(vec, val)
-    } else {
-      r.UnreadByte()
-      
-      val, err := read(r)
-      if err != nil {
-        return nil, err
-      }
-      
-      vec = append(vec, val)
-    }
-  }
-  
-  return vec, nil
+	vec := []interface{}{}
+
+	for {
+		ch, err := r.ReadByte()
+		if err == io.EOF {
+			return nil, fmt.Errorf("eof while reading vector")
+		} else if err != nil {
+			return nil, fmt.Errorf("readVector: %v", err)
+		}
+
+		for isWhitespace(ch) {
+			ch, err = r.ReadByte()
+			if err != nil {
+				return nil, fmt.Errorf("readVector: whitespace: ", err)
+			}
+		}
+
+		if ch == ']' {
+			break
+		}
+
+		macroRdr, ok := macros[ch]
+		if ok {
+			val, err := macroRdr(r, ch)
+			if err != nil {
+				return nil, err
+			}
+
+			if val == r {
+				continue
+			}
+
+			vec = append(vec, val)
+		} else {
+			r.UnreadByte()
+
+			val, err := read(r)
+			if err != nil {
+				return nil, err
+			}
+
+			vec = append(vec, val)
+		}
+	}
+
+	return vec, nil
 }
 
 func unmatchedDelimiter(r io.ByteScanner, ch byte) (interface{}, error) {
-  return nil, fmt.Errorf("unmatched delimiter: %v", ch)
+	return nil, fmt.Errorf("unmatched delimiter: %v", ch)
 }
 
 func interpretToken(token string) (interface{}, error) {
-  if token == "nil" {
-    return nil, nil
-  } else if token == "true" {
-    return true, nil
-  } else if token == "false" {
-    return false, nil
-  }
-  
-  var val interface{}
-  val = matchSymbol(token)
-  if val != nil {
-    return val, nil
-  }
-  
-  return nil, fmt.Errorf("invalid token: '%s'", token)
+	if token == "nil" {
+		return nil, nil
+	} else if token == "true" {
+		return true, nil
+	} else if token == "false" {
+		return false, nil
+	}
+
+	var val interface{}
+	val = matchSymbol(token)
+	if val != nil {
+		return val, nil
+	}
+
+	return nil, fmt.Errorf("invalid token: '%s'", token)
 }
 
 var symbolPattern = regexp.MustCompile("[:]?([^/].*/)?(/|[^/]*)")
 
-type Keyword struct { Namespace string; Name string }
-func (kw Keyword) String() string {
-  if kw.Namespace == "" {
-    return ":" + kw.Name
-  } else {
-    return ":" + kw.Namespace + "/" + kw.Name
-  }
+type Keyword struct {
+	Namespace string
+	Name      string
 }
-type Symbol struct { Namespace string; Name string }
+
+func (kw Keyword) String() string {
+	if kw.Namespace == "" {
+		return ":" + kw.Name
+	} else {
+		return ":" + kw.Namespace + "/" + kw.Name
+	}
+}
+
+type Symbol struct {
+	Namespace string
+	Name      string
+}
+
 func (sym Symbol) String() string {
-  if sym.Namespace == "" {
-    return sym.Name
-  } else {
-    return sym.Namespace + "/" + sym.Name
-  }
+	if sym.Namespace == "" {
+		return sym.Name
+	} else {
+		return sym.Namespace + "/" + sym.Name
+	}
 }
 
 func matchSymbol(s string) interface{} {
-  m := symbolPattern.FindStringSubmatch(s)
-  if m != nil {
-    ns := m[1]
-    name := m[2]
-    if (ns != "" && strings.HasSuffix(ns, ":/")) ||
-      strings.HasSuffix(ns, ":") ||
-      strings.Index(s, "::") != -1 {
-      return nil
-    }
-    if strings.HasPrefix(s, "::") {
-      return nil
-    }
-    
-    if len(ns) != 0 {
-      ns = ns[:len(ns)-1]
-    }
-    if s[0] == ':' {
-      return Keyword{ns, name}
-    } else {
-      return Symbol{ns, name}
-    }
-  } else {
-    return nil
-  }
+	m := symbolPattern.FindStringSubmatch(s)
+	if m != nil {
+		ns := m[1]
+		name := m[2]
+		if (ns != "" && strings.HasSuffix(ns, ":/")) ||
+			strings.HasSuffix(ns, ":") ||
+			strings.Index(s, "::") != -1 {
+			return nil
+		}
+		if strings.HasPrefix(s, "::") {
+			return nil
+		}
+
+		if len(ns) != 0 {
+			ns = ns[:len(ns)-1]
+		}
+		if s[0] == ':' {
+			return Keyword{ns, name}
+		} else {
+			return Symbol{ns, name}
+		}
+	} else {
+		return nil
+	}
 }
 
 func readToken(r io.ByteScanner, ch byte) (string, error) {
-  buf := []byte{ch}
-  // FIXME: if leadContituent && nonConstituent(ch) { ... }
-  
-  for {
-    ch, err := r.ReadByte()
-    if err == io.EOF || isWhitespace(ch) || isTerminatingMacro(ch) {
-      r.UnreadByte()
-      return string(buf), nil
-    } else if err != nil {
-      return "", err
-    }
-    
-    if nonConstituent(ch) {
-      return "", fmt.Errorf("invalid constituent character: '%c'", ch)
-    }
-    
-    buf = append(buf, ch)
-  }
-  return "", nil
+	buf := []byte{ch}
+	// FIXME: if leadContituent && nonConstituent(ch) { ... }
+
+	for {
+		ch, err := r.ReadByte()
+		if err == io.EOF || isWhitespace(ch) || isTerminatingMacro(ch) {
+			r.UnreadByte()
+			return string(buf), nil
+		} else if err != nil {
+			return "", err
+		}
+
+		if nonConstituent(ch) {
+			return "", fmt.Errorf("invalid constituent character: '%c'", ch)
+		}
+
+		buf = append(buf, ch)
+	}
+	return "", nil
 }
 
 func nonConstituent(ch byte) bool {
-  return ch == '@' || ch == '`' || ch == '~'
+	return ch == '@' || ch == '`' || ch == '~'
 }
 
 func isTerminatingMacro(ch byte) bool {
-  return ch != '#' && ch != '\'' && isMacro(ch)
+	return ch != '#' && ch != '\'' && isMacro(ch)
 }
 
 func readNumber(r io.ByteScanner, ch byte) (int, error) {
-  buf := []byte{ch}
-  
-  for {
-    ch, err := r.ReadByte()
-    
-    if err == io.EOF || isWhitespace(ch) || isMacro(ch) {
-      r.UnreadByte()
-      break
-    }
-    
-    buf = append(buf, ch)
-  }
-  
-  return strconv.Atoi(string(buf))
+	buf := []byte{ch}
+
+	for {
+		ch, err := r.ReadByte()
+
+		if err == io.EOF || isWhitespace(ch) || isMacro(ch) {
+			r.UnreadByte()
+			break
+		}
+
+		buf = append(buf, ch)
+	}
+
+	return strconv.Atoi(string(buf))
 }
 
 func isWhitespace(ch byte) bool {
-  return ch == ' '
+	return ch == ' '
 }
 
 func isMacro(ch byte) bool {
-  _, ok := macros[ch]
-  return ok
+	_, ok := macros[ch]
+	return ok
 }
 
 func isDigit(ch byte) bool {
-  switch ch {
-  case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-    return true
-  default:
-    return false
-  }
+	switch ch {
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return true
+	default:
+		return false
+	}
 }
