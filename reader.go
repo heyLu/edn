@@ -1,3 +1,6 @@
+// References:
+//  - http://edn-format.org
+//  - https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/EdnReader.java
 package main
 
 import (
