@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/big"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -32,6 +33,9 @@ func main() {
 	readAndPrint("0xff")
 	readAndPrint("13")
 	readAndPrint("2r1111")
+	readAndPrint("2r1111N")
+	readAndPrint("3r12")
+	readAndPrint("3r12N")
 }
 
 func readAndPrint(s string) {
@@ -524,15 +528,19 @@ func readNumber(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 var (
-	//                                1              2               3        4                5              6             7
-	intPattern = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|([1-9][0-9]*)|(0))$")
+	//                                 1              2               3        4                5              6             7   8
+	intPattern = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+?)|([1-9][0-9]*)|(0))(N)?$")
 )
 
 func matchNumber(s string) (interface{}, error) {
 	match := intPattern.FindStringSubmatch(s)
 	if match != nil {
-		if match[7] != "" { // single zero
-			return 0, nil
+		if match[7] != "" {
+			if match[8] == "" {
+				return 0, nil
+			} else {
+				return &big.Int{}, nil
+			}
 		}
 
 		negate := match[1] == "-"
@@ -559,14 +567,38 @@ func matchNumber(s string) (interface{}, error) {
 			return nil, fmt.Errorf("invalid number")
 		}
 
-		i, err := strconv.ParseInt(n, radix, 64)
-		if err != nil {
-			return nil, err
-		}
+		if match[8] == "" {
+			i, err := strconv.ParseInt(n, radix, 64)
+			if err != nil {
+				return nil, err
+			}
 
-		if negate {
-			return -i, nil
+			if negate {
+				return -i, nil
+			} else {
+				return i, nil
+			}
 		} else {
+			var base string
+			switch radix {
+			case 16:
+				base = "0x"
+			case 10:
+				base = ""
+			case 8:
+				base = "0"
+			case 2:
+				base = "0b"
+			default:
+				return nil, fmt.Errorf("big integer can only have base 2, 8, 10 or 16")
+			}
+
+			i := new(big.Int)
+			_, err := fmt.Sscan(base+n, i)
+			if err != nil {
+				return nil, err
+			}
+
 			return i, nil
 		}
 	} else {
