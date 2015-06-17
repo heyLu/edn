@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 \"hey\";\n4 oops/what :oops/what something]")
+	bs := []byte("[1 2 3 true (4 5 6) \"hey\";\n4 oops/what :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -22,7 +22,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(val)
+	fmt.Printf("%#v\n", val)
 }
 
 func read(r io.ByteScanner) (interface{}, error) {
@@ -88,6 +88,8 @@ var macros = map[byte]func(r io.ByteScanner, ch byte) (interface{}, error){}
 func init() {
 	macros['['] = readVector
 	macros[']'] = unmatchedDelimiter
+	macros['('] = readList
+	macros[')'] = unmatchedDelimiter
 	macros['"'] = readString
 	macros[';'] = readComment
 }
@@ -163,6 +165,14 @@ func readString(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 func readVector(r io.ByteScanner, ch byte) (interface{}, error) {
+	return readDelimitedList(r, ']')
+}
+
+func readList(r io.ByteScanner, ch byte) (interface{}, error) {
+	return readDelimitedList(r, ')')
+}
+
+func readDelimitedList(r io.ByteScanner, delim byte) ([]interface{}, error) {
 	vec := []interface{}{}
 
 	for {
@@ -180,7 +190,7 @@ func readVector(r io.ByteScanner, ch byte) (interface{}, error) {
 			}
 		}
 
-		if ch == ']' {
+		if ch == delim {
 			break
 		}
 
@@ -212,7 +222,7 @@ func readVector(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 func unmatchedDelimiter(r io.ByteScanner, ch byte) (interface{}, error) {
-	return nil, fmt.Errorf("unmatched delimiter: %v", ch)
+	return nil, fmt.Errorf("unmatched delimiter: '%c'", ch)
 }
 
 func interpretToken(token string) (interface{}, error) {
