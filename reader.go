@@ -40,6 +40,10 @@ func main() {
 	readAndPrint("0.23532e10")
 	readAndPrint("-252.346436634633")
 	readAndPrint("0.2352M")
+	readAndPrint("3/45")
+	readAndPrint("-253/9")
+	readAndPrint("4/6")
+	readAndPrint("8/2")
 }
 
 func readAndPrint(s string) {
@@ -535,6 +539,7 @@ var (
 	//                                  1              2               3        4                5              6             7   8
 	intPattern   = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+?)|([1-9][0-9]*)|(0))(N)?$")
 	floatPattern = regexp.MustCompile("^([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$")
+	ratioPattern = regexp.MustCompile("^([-+]?[0-9]+)/([0-9]+)$")
 )
 
 func matchNumber(s string) (interface{}, error) {
@@ -622,7 +627,18 @@ func matchNumber(s string) (interface{}, error) {
 		return d, nil
 	}
 
-	return nil, fmt.Errorf("ratios not implemented")
+	match = ratioPattern.FindStringSubmatch(s)
+	if match != nil {
+		r := new(big.Rat)
+		_, err := fmt.Sscan(s, r)
+		if err != nil {
+			return nil, err
+		}
+
+		return r, nil
+	}
+
+	return nil, fmt.Errorf("invalid number")
 }
 
 func isWhitespace(ch byte) bool {
