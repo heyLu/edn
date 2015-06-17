@@ -36,6 +36,10 @@ func main() {
 	readAndPrint("2r1111N")
 	readAndPrint("3r12")
 	readAndPrint("3r12N")
+	readAndPrint("3.1415")
+	readAndPrint("0.23532e10")
+	readAndPrint("-252.346436634633")
+	readAndPrint("0.2352M")
 }
 
 func readAndPrint(s string) {
@@ -528,8 +532,9 @@ func readNumber(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 var (
-	//                                 1              2               3        4                5              6             7   8
-	intPattern = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+?)|([1-9][0-9]*)|(0))(N)?$")
+	//                                  1              2               3        4                5              6             7   8
+	intPattern   = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+?)|([1-9][0-9]*)|(0))(N)?$")
+	floatPattern = regexp.MustCompile("^([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$")
 )
 
 func matchNumber(s string) (interface{}, error) {
@@ -601,9 +606,23 @@ func matchNumber(s string) (interface{}, error) {
 
 			return i, nil
 		}
-	} else {
-		return nil, fmt.Errorf("non-integers not implemented")
 	}
+
+	match = floatPattern.FindStringSubmatch(s)
+	if match != nil {
+		if match[4] != "" {
+			return nil, fmt.Errorf("arbitrary precision floats not implemented")
+		}
+
+		d, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		return d, nil
+	}
+
+	return nil, fmt.Errorf("ratios not implemented")
 }
 
 func isWhitespace(ch byte) bool {
