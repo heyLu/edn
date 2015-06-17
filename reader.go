@@ -24,8 +24,10 @@ func main() {
 	readAndPrint("{:a \"b\" :c d}")
 	readAndPrint("#inst \"1985-04-12T23:20:50.52Z\"")
 	readAndPrint("#uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\"")
-	readAndPrint("[1 ;commentfree\n more]") // FIXME: removing the last brace results in an infinite loop ...
+	readAndPrint("[1 ;commentfree\n more]")
+	readAndPrint("[1 ;commentfree\n more")
 	readAndPrint("[1 2 3 ")
+	readAndPrint("[1 2 3")
 	readAndPrint("#_hidden 42")
 	readAndPrint("0")
 	readAndPrint("0N")
@@ -494,7 +496,9 @@ func readToken(r io.ByteScanner, ch byte) (string, error) {
 
 	for {
 		ch, err := r.ReadByte()
-		if err == io.EOF || isWhitespace(ch) || isTerminatingMacro(ch) {
+		if err == io.EOF {
+			return string(buf), nil
+		} else if isWhitespace(ch) || isTerminatingMacro(ch) {
 			r.UnreadByte()
 			return string(buf), nil
 		} else if err != nil {
@@ -524,7 +528,9 @@ func readNumber(r io.ByteScanner, ch byte) (interface{}, error) {
 	for {
 		ch, err := r.ReadByte()
 
-		if err == io.EOF || isWhitespace(ch) || isMacro(ch) {
+		if err == io.EOF {
+			break
+		} else if isWhitespace(ch) || isMacro(ch) {
 			r.UnreadByte()
 			break
 		}
