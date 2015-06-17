@@ -96,9 +96,17 @@ func init() {
 	macros['"'] = readString
 	macros[';'] = readComment
 	macros['#'] = readDispatch
+	macros['\\'] = notImplemented
+	macros['^'] = notImplemented
 
+	dispatch['^'] = notImplemented
+	dispatch['<'] = notImplemented
 	dispatch['{'] = readSet
 	dispatch['_'] = readDiscard
+}
+
+func notImplemented(r io.ByteScanner, ch byte) (interface{}, error) {
+	return nil, fmt.Errorf("macro or dispatch reader for '%c' not implemented", ch)
 }
 
 func readDispatch(r io.ByteScanner, ch byte) (interface{}, error) {
