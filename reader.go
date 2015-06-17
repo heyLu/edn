@@ -525,8 +525,8 @@ func readNumber(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 var (
-	//                               1              2               3        4                5              6             7
-	intPattern = regexp.MustCompile("([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|([1-9][0-9]*)|(0))")
+	//                                1              2               3        4                5              6             7
+	intPattern = regexp.MustCompile("^([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|([1-9][0-9]*)|(0))$")
 )
 
 func matchNumber(s string) (interface{}, error) {
