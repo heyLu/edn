@@ -5,6 +5,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -15,7 +17,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
+	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -23,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%#v\n", val)
+	fmt.Printf("%v\n", val)
 }
 
 func read(r io.ByteScanner) (interface{}, error) {
@@ -114,6 +116,7 @@ func init() {
 	dispatch['_'] = readDiscard
 
 	tagged[Symbol{Namespace: "", Name: "inst"}] = readTime
+	tagged[Symbol{Namespace: "", Name: "uuid"}] = readUUID
 }
 
 func notImplemented(r io.ByteScanner, ch byte) (interface{}, error) {
@@ -177,6 +180,38 @@ func readTime(tag Symbol, val interface{}) (interface{}, error) {
 	}
 
 	return t, nil
+}
+
+type UUID struct {
+	Msb, Lsb uint64
+}
+
+func (u UUID) String() string {
+	buf := make([]byte, 16)
+	binary.BigEndian.PutUint64(buf[0:8], u.Msb)
+	binary.BigEndian.PutUint64(buf[8:], u.Lsb)
+	return fmt.Sprintf("%x-%x-%x-%x-%x", buf[0:4], buf[4:6], buf[6:8], buf[8:10], buf[10:])
+}
+
+func readUUID(tag Symbol, val interface{}) (interface{}, error) {
+	str, ok := val.(string)
+	if !ok {
+		return nil, fmt.Errorf("uuid value must be a string, but was %#v", val)
+	}
+
+	if len(str) != 36 {
+		return nil, fmt.Errorf("uuid value must be a string of length 36")
+	}
+
+	buf, err := hex.DecodeString(str[0:8] + str[9:13] + str[14:18] + str[19:23] + str[24:])
+	if err != nil {
+		return nil, err
+	}
+
+	msb := binary.BigEndian.Uint64(buf[0:8])
+	lsb := binary.BigEndian.Uint64(buf[8:])
+
+	return UUID{msb, lsb}, nil
 }
 
 func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
