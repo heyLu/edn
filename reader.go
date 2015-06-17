@@ -2,15 +2,15 @@
 //
 // It reads EDN values into plain Go values.
 //
-// - integers and floats are read as int64 and float64
-// - big integers and ratios are read as big.Int and big.Rat
-// - symbols and keywords are read as Symbol and Keyword
-// - lists and vectors are read as []interface{}
-// - maps are read as map[interface{}]interface{}
-// - sets are read as map[interface{}]bool
-// - instants are read as time.Time
-// - uuids are read as UUID
-// - comments (;) and discards (#_) are supported
+//  - integers and floats are read as int64 and float64
+//  - big integers and ratios are read as big.Int and big.Rat
+//  - symbols and keywords are read as Symbol and Keyword
+//  - lists and vectors are read as []interface{}
+//  - maps are read as map[interface{}]interface{}
+//  - sets are read as map[interface{}]bool
+//  - instants are read as time.Time
+//  - uuids are read as UUID
+//  - comments (;) and discards (#_) are supported
 //
 // Support for arbitrary precision floats and custom tagged
 // elements is not implemented yet.
