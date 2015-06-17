@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,7 +17,21 @@ import (
 )
 
 func main() {
-	readAndPrint("[0xf 012 0 0N 79832478479 2r100001001001 1 2 3 true (4 5 6) #_[7 8 9] \"hey\"; this is a comment\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
+	readAndPrint("[1 2 3 :hey \"ho\"]")
+	readAndPrint("(4 5 6 yay/nay)")
+	readAndPrint("#{1 3 -7 100 3 -7 :oops}")
+	readAndPrint("{:a \"b\" :c d}")
+	readAndPrint("#inst \"1985-04-12T23:20:50.52Z\"")
+	readAndPrint("#uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\"")
+	readAndPrint("[1 ;commentfree\n more]") // FIXME: removing the last brace results in an infinite loop ...
+	readAndPrint("[1 2 3 ")
+	readAndPrint("#_hidden 42")
+	readAndPrint("0")
+	readAndPrint("0N")
+	readAndPrint("1214")
+	readAndPrint("0xff")
+	readAndPrint("13")
+	readAndPrint("2r1111")
 }
 
 func readAndPrint(s string) {
@@ -24,10 +39,11 @@ func readAndPrint(s string) {
 
 	val, err := read(buf)
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Printf("%#-50v %v\n", s, err)
+		return
 	}
 
-	fmt.Printf("%v\n", val)
+	fmt.Printf("%#-50v %-35v %v\n", s, reflect.TypeOf(val), val)
 }
 
 func read(r io.ByteScanner) (interface{}, error) {
