@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} oops/what :oops/what something]")
+	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -91,7 +91,7 @@ func init() {
 	macros[']'] = unmatchedDelimiter
 	macros['('] = readList
 	macros[')'] = unmatchedDelimiter
-	macros['{'] = unmatchedDelimiter
+	macros['{'] = readMap
 	macros['}'] = unmatchedDelimiter
 	macros['"'] = readString
 	macros[';'] = readComment
@@ -136,6 +136,26 @@ func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
 func readDiscard(r io.ByteScanner, ch byte) (interface{}, error) {
 	_, err := read(r)
 	return r, err
+}
+
+func readMap(r io.ByteScanner, ch byte) (interface{}, error) {
+	elems, err := readDelimitedList(r, '}')
+	if err == io.EOF {
+		return nil, fmt.Errorf("eof while reading comment")
+	} else if err != nil {
+		return nil, err
+	}
+
+	if len(elems)%2 != 0 {
+		return nil, fmt.Errorf("map literal must contain an even number of forms")
+	}
+
+	m := make(map[interface{}]interface{}, len(elems)/2)
+	for i := 0; i < len(elems); i += 2 {
+		m[elems[i]] = elems[i+1]
+	}
+
+	return m, nil
 }
 
 func readComment(r io.ByteScanner, ch byte) (interface{}, error) {
