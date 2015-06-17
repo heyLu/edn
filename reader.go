@@ -391,11 +391,9 @@ func readDelimitedList(r io.ByteScanner, delim byte) ([]interface{}, error) {
 				return nil, err
 			}
 
-			if val == r {
-				continue
+			if val != r {
+				vec = append(vec, val)
 			}
-
-			vec = append(vec, val)
 		} else {
 			r.UnreadByte()
 
@@ -404,7 +402,9 @@ func readDelimitedList(r io.ByteScanner, delim byte) ([]interface{}, error) {
 				return nil, err
 			}
 
-			vec = append(vec, val)
+			if val != r {
+				vec = append(vec, val)
+			}
 		}
 	}
 
