@@ -56,7 +56,7 @@ func read(r io.ByteScanner) (interface{}, error) {
 		for isWhitespace(ch) {
 			ch, err = r.ReadByte()
 			if err != nil {
-				return nil, fmt.Errorf("whitespace: ", err)
+				return nil, fmt.Errorf("whitespace: %v", err)
 			}
 		}
 
@@ -365,7 +365,7 @@ func readDelimitedList(r io.ByteScanner, delim byte) ([]interface{}, error) {
 		for isWhitespace(ch) {
 			ch, err = r.ReadByte()
 			if err != nil {
-				return nil, fmt.Errorf("readVector: whitespace: ", err)
+				return nil, fmt.Errorf("readVector: whitespace: %v", err)
 			}
 		}
 
