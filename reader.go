@@ -1,3 +1,20 @@
+// Package edn implements reading EDN values.
+//
+// It reads EDN values into plain Go values.
+//
+// - integers and floats are read as int64 and float64
+// - big integers and ratios are read as big.Int and big.Rat
+// - symbols and keywords are read as Symbol and Keyword
+// - lists and vectors are read as []interface{}
+// - maps are read as map[interface{}]interface{}
+// - sets are read as map[interface{}]bool
+// - instants are read as time.Time
+// - uuids are read as UUID
+// - comments (;) and discards (#_) are supported
+//
+// Support for arbitrary precision floats and custom tagged
+// elements is not implemented yet.
+//
 // References:
 //  - http://edn-format.org
 //  - https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/EdnReader.java
@@ -16,11 +33,13 @@ import (
 	"time"
 )
 
+// DecodeString reads the first value from a string.
 func DecodeString(s string) (interface{}, error) {
 	buf := bytes.NewBuffer([]byte(s))
 	return ReadValue(buf)
 }
 
+// ReadValue reads the next value.
 func ReadValue(r io.ByteScanner) (interface{}, error) {
 	for {
 		ch, err := r.ReadByte()
