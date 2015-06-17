@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
+	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -92,6 +92,7 @@ func read(r io.ByteScanner) (interface{}, error) {
 
 var macros = map[byte]func(r io.ByteScanner, ch byte) (interface{}, error){}
 var dispatch = map[byte]func(r io.ByteScanner, ch byte) (interface{}, error){}
+var tagged = map[Symbol]func(tag Symbol, val interface{}) (interface{}, error){}
 
 func init() {
 	macros['['] = readVector
@@ -128,8 +129,37 @@ func readDispatch(r io.ByteScanner, ch byte) (interface{}, error) {
 	if ok {
 		return dispatchRdr(r, ch)
 	} else {
-		return nil, fmt.Errorf("tagged readers not implemented")
+		r.UnreadByte()
+		return readTagged(r, ch)
 	}
+}
+
+func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
+	sym, err := read(r)
+	if err == io.EOF {
+		return nil, fmt.Errorf("eof while reading reader tag")
+	} else if err != nil {
+		return nil, err
+	}
+
+	tag, ok := sym.(Symbol)
+	if !ok {
+		return nil, fmt.Errorf("reader tag must be a symbol")
+	}
+
+	obj, err := read(r)
+	if err == io.EOF {
+		return nil, fmt.Errorf("eof while reading tagged value")
+	} else if err != nil {
+		return nil, err
+	}
+
+	readerFn, ok := tagged[tag]
+	if !ok {
+		return nil, fmt.Errorf("no reader function for tag %v", tag)
+	}
+
+	return readerFn(tag, obj)
 }
 
 func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
