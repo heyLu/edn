@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,12 +16,15 @@ import (
 )
 
 func main() {
-	bs := []byte("[0xf 012 0 0N 79832478479 2r100001001001 1 2 3 true (4 5 6) #_[7 8 9] \"hey\"; this is a comment\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
-	buf := bytes.NewReader(bs)
+	readAndPrint("[0xf 012 0 0N 79832478479 2r100001001001 1 2 3 true (4 5 6) #_[7 8 9] \"hey\"; this is a comment\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
+}
+
+func readAndPrint(s string) {
+	buf := bytes.NewReader([]byte(s))
 
 	val, err := read(buf)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error:", err)
 	}
 
 	fmt.Printf("%v\n", val)
