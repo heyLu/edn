@@ -32,6 +32,13 @@ func read(r io.ByteScanner) (interface{}, error) {
 			return nil, err
 		}
 
+		for isWhitespace(ch) {
+			ch, err = r.ReadByte()
+			if err != nil {
+				return nil, fmt.Errorf("whitespace: ", err)
+			}
+		}
+
 		if isDigit(ch) {
 			n, err := readNumber(r, ch)
 			if err != nil {
