@@ -39,8 +39,7 @@ func readAndPrint(s string) {
 
 	val, err := read(buf)
 	if err != nil {
-		fmt.Printf("%#-50v %v\n", s, err)
-		return
+		val = err
 	}
 
 	fmt.Printf("%#-50v %-35v %v\n", s, reflect.TypeOf(val), val)
