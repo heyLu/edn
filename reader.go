@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -111,6 +112,8 @@ func init() {
 	dispatch['<'] = notImplemented
 	dispatch['{'] = readSet
 	dispatch['_'] = readDiscard
+
+	tagged[Symbol{Namespace: "", Name: "inst"}] = readTime
 }
 
 func notImplemented(r io.ByteScanner, ch byte) (interface{}, error) {
@@ -160,6 +163,20 @@ func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
 	}
 
 	return readerFn(tag, obj)
+}
+
+func readTime(tag Symbol, val interface{}) (interface{}, error) {
+	str, ok := val.(string)
+	if !ok {
+		return nil, fmt.Errorf("inst value must be a string, but was %#v", val)
+	}
+
+	t, err := time.Parse(time.RFC3339, str)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
 func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
