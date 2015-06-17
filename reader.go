@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 oops/what :oops/what something]")
+	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} oops/what :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -91,10 +91,13 @@ func init() {
 	macros[']'] = unmatchedDelimiter
 	macros['('] = readList
 	macros[')'] = unmatchedDelimiter
+	macros['{'] = unmatchedDelimiter
+	macros['}'] = unmatchedDelimiter
 	macros['"'] = readString
 	macros[';'] = readComment
 	macros['#'] = readDispatch
 
+	dispatch['{'] = readSet
 	dispatch['_'] = readDiscard
 }
 
@@ -112,6 +115,22 @@ func readDispatch(r io.ByteScanner, ch byte) (interface{}, error) {
 	} else {
 		return nil, fmt.Errorf("tagged readers not implemented")
 	}
+}
+
+func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
+	elems, err := readDelimitedList(r, '}')
+	if err == io.EOF {
+		return nil, fmt.Errorf("eof while reading comment")
+	} else if err != nil {
+		return nil, err
+	}
+
+	set := make(map[interface{}]bool, len(elems))
+	for _, elem := range elems {
+		set[elem] = true
+	}
+
+	return set, nil
 }
 
 func readDiscard(r io.ByteScanner, ch byte) (interface{}, error) {
