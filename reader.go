@@ -532,7 +532,6 @@ var (
 func matchNumber(s string) (interface{}, error) {
 	match := intPattern.FindStringSubmatch(s)
 	if match != nil {
-		fmt.Printf("%#v\n", intPattern.FindAllStringSubmatch(s, -1))
 		if match[7] != "" { // single zero
 			return 0, nil
 		}
@@ -550,7 +549,6 @@ func matchNumber(s string) (interface{}, error) {
 			n = match[3]
 			radix = 8
 		} else if match[5] != "" { // custom radix
-			fmt.Println("custom radix", match[4], match[5])
 			n = match[5]
 			var err error
 			radix, err = strconv.Atoi(match[4])
@@ -562,7 +560,6 @@ func matchNumber(s string) (interface{}, error) {
 			return nil, fmt.Errorf("invalid number")
 		}
 
-		fmt.Printf("%#v %#v\n", s, match)
 		i, err := strconv.ParseInt(n, radix, 64)
 		if err != nil {
 			return nil, err
