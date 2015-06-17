@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	bs := []byte("[1 2 3 true (4 5 6) #_[7 8 9] \"hey\";\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
+	bs := []byte("[0xf 012 0 0N 79832478479 2r100001001001 1 2 3 true (4 5 6) #_[7 8 9] \"hey\"; this is a comment\n4 #{1 2 2 3 1 7} #inst \"1985-04-12T23:20:50.52Z\" #uuid \"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\" oops/what {\"hey\" \"ho\" 3 4 7 :oops} :oops/what something]")
 	buf := bytes.NewReader(bs)
 
 	val, err := read(buf)
@@ -489,7 +489,7 @@ func isTerminatingMacro(ch byte) bool {
 	return ch != '#' && ch != '\'' && isMacro(ch)
 }
 
-func readNumber(r io.ByteScanner, ch byte) (int, error) {
+func readNumber(r io.ByteScanner, ch byte) (interface{}, error) {
 	buf := []byte{ch}
 
 	for {
@@ -503,7 +503,61 @@ func readNumber(r io.ByteScanner, ch byte) (int, error) {
 		buf = append(buf, ch)
 	}
 
-	return strconv.Atoi(string(buf))
+	return matchNumber(string(buf))
+}
+
+var (
+	//                               1              2               3        4                5              6             7
+	intPattern = regexp.MustCompile("([-+]?)(?:0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|([1-9][0-9]*)|(0))")
+)
+
+func matchNumber(s string) (interface{}, error) {
+	match := intPattern.FindStringSubmatch(s)
+	if match != nil {
+		fmt.Printf("%#v\n", intPattern.FindAllStringSubmatch(s, -1))
+		if match[7] != "" { // single zero
+			return 0, nil
+		}
+
+		negate := match[1] == "-"
+		radix := 10
+		var n string
+		if match[6] != "" { // base 10 (> 0)
+			n = match[6]
+			radix = 10
+		} else if match[2] != "" { // base 16
+			n = match[2]
+			radix = 16
+		} else if match[3] != "" { // base 8
+			n = match[3]
+			radix = 8
+		} else if match[5] != "" { // custom radix
+			fmt.Println("custom radix", match[4], match[5])
+			n = match[5]
+			var err error
+			radix, err = strconv.Atoi(match[4])
+			if err != nil {
+				return nil, err
+			}
+		}
+		if n == "" {
+			return nil, fmt.Errorf("invalid number")
+		}
+
+		fmt.Printf("%#v %#v\n", s, match)
+		i, err := strconv.ParseInt(n, radix, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		if negate {
+			return -i, nil
+		} else {
+			return i, nil
+		}
+	} else {
+		return nil, fmt.Errorf("non-integers not implemented")
+	}
 }
 
 func isWhitespace(ch byte) bool {
