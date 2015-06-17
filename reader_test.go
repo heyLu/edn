@@ -41,7 +41,7 @@ func TestExamples(t *testing.T) {
 func readAndPrint(s string) {
 	buf := bytes.NewReader([]byte(s))
 
-	val, err := read(buf)
+	val, err := ReadValue(buf)
 	if err != nil {
 		val = err
 	}

@@ -18,10 +18,10 @@ import (
 
 func DecodeString(s string) (interface{}, error) {
 	buf := bytes.NewBuffer([]byte(s))
-	return read(buf)
+	return ReadValue(buf)
 }
 
-func read(r io.ByteScanner) (interface{}, error) {
+func ReadValue(r io.ByteScanner) (interface{}, error) {
 	for {
 		ch, err := r.ReadByte()
 		if err != nil {
@@ -134,7 +134,7 @@ func readDispatch(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
-	sym, err := read(r)
+	sym, err := ReadValue(r)
 	if err == io.EOF {
 		return nil, fmt.Errorf("eof while reading reader tag")
 	} else if err != nil {
@@ -146,7 +146,7 @@ func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
 		return nil, fmt.Errorf("reader tag must be a symbol")
 	}
 
-	obj, err := read(r)
+	obj, err := ReadValue(r)
 	if err == io.EOF {
 		return nil, fmt.Errorf("eof while reading tagged value")
 	} else if err != nil {
@@ -224,7 +224,7 @@ func readSet(r io.ByteScanner, ch byte) (interface{}, error) {
 }
 
 func readDiscard(r io.ByteScanner, ch byte) (interface{}, error) {
-	_, err := read(r)
+	_, err := ReadValue(r)
 	return r, err
 }
 
@@ -361,7 +361,7 @@ func readDelimitedList(r io.ByteScanner, delim byte) ([]interface{}, error) {
 		} else {
 			r.UnreadByte()
 
-			val, err := read(r)
+			val, err := ReadValue(r)
 			if err != nil {
 				return nil, err
 			}
