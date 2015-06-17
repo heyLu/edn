@@ -39,6 +39,24 @@ func DecodeString(s string) (interface{}, error) {
 	return ReadValue(buf)
 }
 
+// ReadAllValues reads values until io.EOF is reached
+func ReadAllValues(r io.ByteScanner) ([]interface{}, error) {
+	vals := []interface{}{}
+
+	for {
+		val, err := ReadValue(r)
+		if err != nil {
+			if err == io.EOF {
+				return vals, nil
+			}
+
+			return nil, err
+		}
+
+		vals = append(vals, val)
+	}
+}
+
 // ReadValue reads the next value.
 func ReadValue(r io.ByteScanner) (interface{}, error) {
 	for {
