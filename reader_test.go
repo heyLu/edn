@@ -9,6 +9,7 @@ import (
 
 func TestExamples(t *testing.T) {
 	readAndPrint("[1 2 3 :hey \"ho\"]")
+	readAndPrint("[1, 2, 3]")
 	readAndPrint("(4 5 6 yay/nay)")
 	readAndPrint("#{1 3 -7 100 3 -7 :oops}")
 	readAndPrint("{:a \"b\" :c d}")
