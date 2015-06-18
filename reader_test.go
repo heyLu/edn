@@ -36,6 +36,7 @@ func TestExamples(t *testing.T) {
 	readAndPrint("-253/9")
 	readAndPrint("4/6")
 	readAndPrint("8/2")
+	readAndPrint("#fun/maybe [who knows]")
 }
 
 func readAndPrint(s string) {

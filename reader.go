@@ -170,6 +170,11 @@ func readDispatch(r io.ByteScanner, ch byte) (interface{}, error) {
 	}
 }
 
+type Tagged struct {
+	Tag   Symbol
+	Value interface{}
+}
+
 func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
 	sym, err := ReadValue(r)
 	if err == io.EOF {
@@ -192,7 +197,7 @@ func readTagged(r io.ByteScanner, ch byte) (interface{}, error) {
 
 	readerFn, ok := tagged[tag]
 	if !ok {
-		return nil, fmt.Errorf("no reader function for tag %v", tag)
+		return Tagged{Tag: tag, Value: obj}, nil
 	}
 
 	return readerFn(tag, obj)
