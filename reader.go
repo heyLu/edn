@@ -652,7 +652,7 @@ func matchNumber(s string) (interface{}, error) {
 }
 
 func isWhitespace(ch byte) bool {
-	return ch == ' ' || ch == '\n' || ch == ','
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == ','
 }
 
 func isMacro(ch byte) bool {
